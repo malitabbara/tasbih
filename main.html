@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#e6ffec" />
-  <title>Digital Tasbih (Volume-Button Capture)</title>
+  <title>Digital Tasbih (Auto‐Play Volume‐Capture)</title>
 
   <!-- Tailwind for styling -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -50,6 +50,21 @@
     #silence {
       display: none;
     }
+    /* Notice to tap if autoplay fails */
+    #tapNotice {
+      position: fixed;
+      bottom: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.9);
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      font-size: 0.875rem;
+      color: #475569;
+      display: none;
+      z-index: 50;
+    }
   </style>
 </head>
 <body>
@@ -60,7 +75,7 @@
         Welcome to Digital Tasbih
       </h1>
       <p class="text-gray-600">
-        Press your device’s volume buttons to count (iOS version)
+        Press your device’s volume buttons to count (iOS/Android)
       </p>
 
       <!-- Reset button -->
@@ -88,31 +103,17 @@
       </div>
     </div>
 
-    <!-- “Enable Volume­Capture” Button -->
-    <div id="enableContainer" class="text-center mb-8">
-      <button
-        id="enableVolume"
-        class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-colors duration-200"
-      >
-        Enable Volume-Capture
-      </button>
-      <p class="text-sm text-gray-500 mt-2">
-        (You must tap this once so that a hidden audio can play. Then your hardware
-        volume buttons will be captured.)
-      </p>
-    </div>
-
     <!-- Fallback instructions -->
     <div class="bg-white rounded-xl p-6 shadow-lg">
       <h2 class="text-xl font-semibold text-green-700 mb-3">How to use</h2>
       <ul class="space-y-2 text-gray-600">
         <li class="flex items-start">
           <i class="fas fa-volume-up text-green-500 mt-1 mr-2"></i>
-          <span>Press <strong>Volume Up</strong> to increase count (after enabling).</span>
+          <span>Press <strong>Volume Up</strong> to increase count.</span>
         </li>
         <li class="flex items-start">
           <i class="fas fa-volume-down text-green-500 mt-1 mr-2"></i>
-          <span>Press <strong>Volume Down</strong> to increase count (after enabling).</span>
+          <span>Press <strong>Volume Down</strong> to increase count.</span>
         </li>
         <li class="flex items-start">
           <i class="fas fa-hand-pointer text-green-500 mt-1 mr-2"></i>
@@ -134,29 +135,26 @@
     </div>
   </div>
 
-  <!--
-    Hidden “silent” audio element. We loop a 1-second silent WAV (data URI).
-    When this is playing, iOS volume buttons adjust its volume property
-    and fire a “volumechange” event, which we can listen to.
-  -->
+  <!-- Hidden “silent” audio element (1-second silent WAV) -->
   <audio id="silence" loop>
     <source
       src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA="
       type="audio/wav"
     />
-    <!--
-      That base64 is a one‐second silent WAV. Browsers that support WAV will play “silence”.
-    -->
   </audio>
+
+  <!-- Tap-to-enable notice (shown if autoplay is blocked) -->
+  <div id="tapNotice">
+    Tap anywhere to enable volume-button capture
+  </div>
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const counterEl = document.getElementById("counter");
       const resetBtn = document.getElementById("resetBtn");
-      const enableBtn = document.getElementById("enableVolume");
-      const enableContainer = document.getElementById("enableContainer");
       const celebration = document.getElementById("celebration");
       const silentAudio = document.getElementById("silence");
+      const tapNotice = document.getElementById("tapNotice");
 
       const STORAGE_KEY = "tasbih_counter";
       let count = 0;
@@ -184,74 +182,11 @@
         giveHaptic();
       });
 
-      // 4) “Enable Volume-Capture” button: user must tap this to start silent audio
-      enableBtn.addEventListener("click", async () => {
-        try {
-          // Set initial volume to 0 (so user won’t hear anything). Volume is 0.0–1.0
-          silentAudio.volume = 0;
-          // Start playing it in a loop
-          await silentAudio.play();
-          // Hide the “Enable” button area
-          enableContainer.style.display = "none";
-
-          // Now that audio is playing, hardware volume buttons will fire `silence.volumechange`
-          attachVolumeListener();
-        } catch (err) {
-          console.warn(
-            "Autoplay failed. The user must tap again or grant permission.",
-            err
-          );
-        }
-      });
-
-      // 5) Once the silent audio is playing, listen for volumechange:
-      function attachVolumeListener() {
-        let lastVolume = silentAudio.volume;
-
-        silentAudio.addEventListener("volumechange", () => {
-          // Safari on iOS will adjust the audio’s volume in steps (0, 0.0625, 0.125, … up to 1).
-          // We only care that the user pressed UP or DOWN, so we compare new volume vs. old.
-          const newVol = silentAudio.volume;
-          if (newVol !== lastVolume) {
-            increment();
-            giveHaptic();
-            lastVolume = newVol;
-          }
-        });
-      }
-
-      // 6) increment() logic & celebration
-      function increment() {
-        count++;
-        counterEl.textContent = count;
-        localStorage.setItem(STORAGE_KEY, count);
-        animateCounter();
-        if (count > 0 && count % 33 === 0) {
-          showCelebration();
-        }
-      }
-
-      function animateCounter() {
-        const container = document.getElementById("counterContainer");
-        container.classList.add("counter-animation");
-        setTimeout(() => {
-          container.classList.remove("counter-animation");
-        }, 300);
-      }
-
-      function showCelebration() {
-        celebration.classList.remove("hidden");
-        setTimeout(() => {
-          celebration.classList.add("hidden");
-        }, 1500);
-      }
-
-      function giveHaptic() {
-        if (navigator.vibrate) {
-          navigator.vibrate(50);
-        }
-      }
-    });
-  </script>
-</body>
-</html>
+      // 4) Attempt autoplay of silent audio on load
+      function tryAutoplay() {
+        silentAudio.volume = 0; // ensure we start muted
+        silentAudio
+          .play()
+          .then(() => {
+            // Autoplay succeeded—attach volume listener now
+            attachVolumeListener();
