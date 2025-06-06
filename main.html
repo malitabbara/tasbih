@@ -158,6 +158,28 @@
 
       const STORAGE_KEY = "tasbih_counter";
       let count = 0;
+      let volumeButtonUsed = false;
+      
+      // Auto-start the silent player
+      silentAudio.volume = 0;
+      silentAudio.play().catch(() => {
+        tapNotice.style.display = 'block';
+        document.addEventListener('click', () => {
+          silentAudio.play();
+          tapNotice.style.display = 'none';
+        });
+      });
+
+      // Detect volume changes through the silent audio element
+      silentAudio.addEventListener('volumechange', () => {
+        // Only count if the silent audio volume was changed
+        if (silentAudio.volume > 0) {
+          volumeButtonUsed = true;
+          silentAudio.volume = 0; // Reset to silent
+          increment();
+          giveHaptic();
+        }
+      });
 
       // 1) Initialize counter from localStorage
       if (localStorage.getItem(STORAGE_KEY) !== null) {
@@ -182,11 +204,35 @@
         giveHaptic();
       });
 
-      // 4) Attempt autoplay of silent audio on load
+      // 4) Attempt autoplay of silent audio
       function tryAutoplay() {
         silentAudio.volume = 0; // ensure we start muted
-        silentAudio
-          .play()
+        silentAudio.play()
           .then(() => {
-            // Autoplay succeeded—attach volume listener now
-            attachVolumeListener();
+            // Autoplay succeeded - attach volume listeners
+            window.addEventListener('keydown', handleKeyPress);
+            window.addEventListener('keyup', handleKeyPress);
+          })
+          .catch((err) => {
+            // Failed - show tap notice
+            tapNotice.style.display = 'block';
+            document.addEventListener('click', handleFirstTap);
+          });
+      }
+
+      // 5) Handle first tap when autoplay is blocked
+      function handleFirstTap() {
+        tryAutoplay();
+        tapNotice.style.display = 'none';
+        document.removeEventListener('click', handleFirstTap);
+      }
+
+      // 6) Handle volume button presses (fallback for key events)
+      function handleKeyPress(e) {
+        if (e.key === "VolumeUp" || e.key === "VolumeDown") {
+          e.preventDefault();
+          volumeButtonUsed = true;
+          increment();
+          giveHaptic();
+        }
+      }
