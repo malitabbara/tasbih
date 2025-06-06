@@ -2,23 +2,35 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#e6ffec" />
-  <link rel="manifest" href="/manifest.json" />
-  <title>Digital Tasbih Counter</title>
+  <title>Digital Tasbih (Volume-Button Capture)</title>
+
+  <!-- Tailwind for styling -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
   />
+
   <style>
     body {
       user-select: none;
       -webkit-user-select: none;
       margin: 0;
       padding: 0;
+      background: linear-gradient(to bottom, #d1fae5, #bfdbfe);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: system-ui, sans-serif;
     }
     .counter-animation {
       animation: pulse 0.3s ease-in-out;
@@ -34,27 +46,34 @@
         transform: scale(1);
       }
     }
+    /* Hide the silent audio player UI */
+    #silence {
+      display: none;
+    }
   </style>
 </head>
-<body
-  class="bg-gradient-to-b from-green-100 to-blue-100 min-h-screen flex flex-col items-center justify-center p-4 transition-colors duration-300"
->
-  <div class="w-full max-w-md mx-auto">
-    <!-- Header -->
+<body>
+  <div class="w-full max-w-md mx-auto p-4">
+    <!-- Header / Title -->
     <div class="text-center mb-8 relative">
-      <h1 class="text-3xl font-bold text-green-800 mb-2">Welcome to Digital Tasbih</h1>
-      <p class="text-gray-600">Press your device’s volume buttons to count</p>
+      <h1 class="text-3xl font-bold text-green-800 mb-2">
+        Welcome to Digital Tasbih
+      </h1>
+      <p class="text-gray-600">
+        Press your device’s volume buttons to count (iOS version)
+      </p>
 
       <!-- Reset button -->
       <button
         id="resetBtn"
         class="absolute top-0 right-0 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-md transition-all duration-200 transform hover:rotate-180"
+        title="Reset Counter"
       >
         <i class="fas fa-redo"></i>
       </button>
     </div>
 
-    <!-- Counter display -->
+    <!-- Main Counter Display -->
     <div
       class="bg-white rounded-2xl shadow-xl p-8 mb-8 transition-all duration-300 hover:shadow-2xl"
     >
@@ -69,29 +88,44 @@
       </div>
     </div>
 
-    <!-- Instructions -->
+    <!-- “Enable Volume­Capture” Button -->
+    <div id="enableContainer" class="text-center mb-8">
+      <button
+        id="enableVolume"
+        class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-colors duration-200"
+      >
+        Enable Volume-Capture
+      </button>
+      <p class="text-sm text-gray-500 mt-2">
+        (You must tap this once so that a hidden audio can play. Then your hardware
+        volume buttons will be captured.)
+      </p>
+    </div>
+
+    <!-- Fallback instructions -->
     <div class="bg-white rounded-xl p-6 shadow-lg">
-      <h2 class="text-xl font-semibold text-green-700 mb-3">How to use:</h2>
+      <h2 class="text-xl font-semibold text-green-700 mb-3">How to use</h2>
       <ul class="space-y-2 text-gray-600">
         <li class="flex items-start">
           <i class="fas fa-volume-up text-green-500 mt-1 mr-2"></i>
-          <span>Press <strong>Volume Up</strong> to increase count</span>
+          <span>Press <strong>Volume Up</strong> to increase count (after enabling).</span>
         </li>
         <li class="flex items-start">
           <i class="fas fa-volume-down text-green-500 mt-1 mr-2"></i>
-          <span>Press <strong>Volume Down</strong> to increase count</span>
+          <span>Press <strong>Volume Down</strong> to increase count (after enabling).</span>
+        </li>
+        <li class="flex items-start">
+          <i class="fas fa-hand-pointer text-green-500 mt-1 mr-2"></i>
+          <span>Tap the big <strong>0</strong> on screen to increment anytime.</span>
         </li>
         <li class="flex items-start">
           <i class="fas fa-redo text-red-500 mt-1 mr-2"></i>
-          <span>Tap the reset button to start over</span>
-        </li>
-        <li class="text-sm text-gray-500">
-          (If your browser does not deliver volume‐key events, tap the big “0” above.)
+          <span>Tap the red <strong>↻</strong> to reset to zero.</span>
         </li>
       </ul>
     </div>
 
-    <!-- Celebration animation -->
+    <!-- Celebration animation (hidden initially) -->
     <div
       id="celebration"
       class="fixed inset-0 flex items-center justify-center pointer-events-none hidden"
@@ -100,16 +134,34 @@
     </div>
   </div>
 
+  <!--
+    Hidden “silent” audio element. We loop a 1-second silent WAV (data URI).
+    When this is playing, iOS volume buttons adjust its volume property
+    and fire a “volumechange” event, which we can listen to.
+  -->
+  <audio id="silence" loop>
+    <source
+      src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA="
+      type="audio/wav"
+    />
+    <!--
+      That base64 is a one‐second silent WAV. Browsers that support WAV will play “silence”.
+    -->
+  </audio>
+
   <script>
-    document.addEventListener("DOMContentLoaded", function () {
+    document.addEventListener("DOMContentLoaded", () => {
       const counterEl = document.getElementById("counter");
       const resetBtn = document.getElementById("resetBtn");
-      const counterContainer = document.getElementById("counterContainer");
+      const enableBtn = document.getElementById("enableVolume");
+      const enableContainer = document.getElementById("enableContainer");
       const celebration = document.getElementById("celebration");
+      const silentAudio = document.getElementById("silence");
 
       const STORAGE_KEY = "tasbih_counter";
       let count = 0;
-      // If there’s a saved value in localStorage, use it:
+
+      // 1) Initialize counter from localStorage
       if (localStorage.getItem(STORAGE_KEY) !== null) {
         const saved = parseInt(localStorage.getItem(STORAGE_KEY), 10);
         if (!isNaN(saved)) {
@@ -118,7 +170,7 @@
       }
       counterEl.textContent = count;
 
-      // Reset button clears counter:
+      // 2) Reset button logic
       resetBtn.addEventListener("click", () => {
         count = 0;
         counterEl.textContent = count;
@@ -126,61 +178,64 @@
         animateCounter();
       });
 
-      // Only increment once per volume‐key press
-      let volumeHeld = false;
-
-      window.addEventListener("keydown", (e) => {
-        // Modern browsers: e.key === "AudioVolumeUp"/"AudioVolumeDown"
-        // Fallback: older keyCodes (179/175 = VolUp, 178/174 = VolDown)
-        const k = e.key;
-        const code = e.keyCode;
-        const isVolUp =
-          k === "AudioVolumeUp" || code === 179 || code === 175;
-        const isVolDown =
-          k === "AudioVolumeDown" || code === 178 || code === 174;
-
-        if ((isVolUp || isVolDown) && !volumeHeld) {
-          e.preventDefault(); // try to block the system volume adjust
-          volumeHeld = true;
-          increment();
-          giveHaptic();
-        }
-      });
-
-      window.addEventListener("keyup", (e) => {
-        const k = e.key;
-        const code = e.keyCode;
-        const isVolUp =
-          k === "AudioVolumeUp" || code === 179 || code === 175;
-        const isVolDown =
-          k === "AudioVolumeDown" || code === 178 || code === 174;
-
-        if (isVolUp || isVolDown) {
-          volumeHeld = false;
-        }
-      });
-
-      // Tapping the big number also increments (fallback/accessibility)
+      // 3) Tapping the on-screen counter always works
       counterEl.addEventListener("click", () => {
         increment();
         giveHaptic();
       });
 
+      // 4) “Enable Volume-Capture” button: user must tap this to start silent audio
+      enableBtn.addEventListener("click", async () => {
+        try {
+          // Set initial volume to 0 (so user won’t hear anything). Volume is 0.0–1.0
+          silentAudio.volume = 0;
+          // Start playing it in a loop
+          await silentAudio.play();
+          // Hide the “Enable” button area
+          enableContainer.style.display = "none";
+
+          // Now that audio is playing, hardware volume buttons will fire `silence.volumechange`
+          attachVolumeListener();
+        } catch (err) {
+          console.warn(
+            "Autoplay failed. The user must tap again or grant permission.",
+            err
+          );
+        }
+      });
+
+      // 5) Once the silent audio is playing, listen for volumechange:
+      function attachVolumeListener() {
+        let lastVolume = silentAudio.volume;
+
+        silentAudio.addEventListener("volumechange", () => {
+          // Safari on iOS will adjust the audio’s volume in steps (0, 0.0625, 0.125, … up to 1).
+          // We only care that the user pressed UP or DOWN, so we compare new volume vs. old.
+          const newVol = silentAudio.volume;
+          if (newVol !== lastVolume) {
+            increment();
+            giveHaptic();
+            lastVolume = newVol;
+          }
+        });
+      }
+
+      // 6) increment() logic & celebration
       function increment() {
         count++;
         counterEl.textContent = count;
         localStorage.setItem(STORAGE_KEY, count);
         animateCounter();
-        // Show 🎉 every 33 counts (optional)
         if (count > 0 && count % 33 === 0) {
           showCelebration();
         }
       }
 
       function animateCounter() {
-        counterContainer.classList.add("counter-animation");
+        const container = document.getElementById("counterContainer");
+        container.classList.add("counter-animation");
         setTimeout(() => {
-          counterContainer.classList.remove("counter-animation");
+          container.classList.remove("counter-animation");
         }, 300);
       }
 
@@ -195,15 +250,6 @@
         if (navigator.vibrate) {
           navigator.vibrate(50);
         }
-      }
-
-      // Register service worker (optional, for PWA)
-      if ("serviceWorker" in navigator) {
-        window.addEventListener("load", () => {
-          navigator.serviceWorker
-            .register("/sw.js")
-            .catch((err) => console.log("SW registration failed:", err));
-        });
       }
     });
   </script>
