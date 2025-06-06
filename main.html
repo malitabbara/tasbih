@@ -1,147 +1,141 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Digital Tasbih Counter</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body {
-            user-select: none;
-            -webkit-user-select: none;
-        }
-        .counter-animation {
-            animation: pulse 0.3s ease-in-out;
-        }
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
-        }
-    </style>
-</head>
-<body class="bg-gradient-to-b from-green-100 to-blue-100 min-h-screen flex flex-col items-center justify-center p-4 transition-colors duration-300">
-    <div class="w-full max-w-md mx-auto">
-        <!-- Header with welcome message -->
-        <div class="text-center mb-8 relative">
-            <h1 class="text-3xl font-bold text-green-800 mb-2">Welcome to Digital Tasbih</h1>
-            <p class="text-gray-600">Use your volume buttons to count</p>
-            
-            <!-- Reset button in top right -->
-            <button id="resetBtn" class="absolute top-0 right-0 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-md transition-all duration-200 transform hover:rotate-180">
-                <i class="fas fa-redo"></i>
-            </button>
-        </div>
-        
-        <!-- Main counter display -->
-        <div class="bg-white rounded-2xl shadow-xl p-8 mb-8 transition-all duration-300 hover:shadow-2xl">
-            <div id="counterContainer" class="text-center">
-                <div class="text-gray-500 mb-2">Your Count</div>
-                <div id="counter" class="text-7xl font-bold text-green-600 transition-all duration-200">0</div>
-            </div>
-        </div>
-        
-        <!-- Instructions -->
-        <div class="bg-white rounded-xl p-6 shadow-lg">
-            <h2 class="text-xl font-semibold text-green-700 mb-3">How to use:</h2>
-            <ul class="space-y-2 text-gray-600">
-                <li class="flex items-start">
-                    <i class="fas fa-volume-up text-green-500 mt-1 mr-2"></i>
-                    <span>Press <strong>Volume Up</strong> to increase count</span>
-                </li>
-                <li class="flex items-start">
-                    <i class="fas fa-volume-down text-green-500 mt-1 mr-2"></i>
-                    <span>Press <strong>Volume Down</strong> to increase count</span>
-                </li>
-                <li class="flex items-start">
-                    <i class="fas fa-redo text-red-500 mt-1 mr-2"></i>
-                    <span>Click the reset button to start over</span>
-                </li>
-            </ul>
-        </div>
-        
-        <!-- Celebration animation container -->
-        <div id="celebration" class="fixed inset-0 flex items-center justify-center pointer-events-none hidden">
-            <div class="text-6xl animate-bounce">🎉</div>
-        </div>
-    </div>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tasbih Counter</title>
+  <style>
+    /* Make the page take up the full viewport */
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      font-family: sans-serif;
+      background-color: #f5f5f5;
+    }
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const counter = document.getElementById('counter');
-            const resetBtn = document.getElementById('resetBtn');
-            const counterContainer = document.getElementById('counterContainer');
-            const celebration = document.getElementById('celebration');
-            
-            let count = 0;
-            const STORAGE_KEY = 'tasbih_counter';
-            
-            // Load saved count from localStorage
-            if (localStorage.getItem(STORAGE_KEY)) {
-                count = parseInt(localStorage.getItem(STORAGE_KEY));
-                counter.textContent = count;
-            }
-            
-            // Reset button functionality
-            resetBtn.addEventListener('click', function() {
-                count = 0;
-                counter.textContent = count;
-                localStorage.setItem(STORAGE_KEY, count);
-                
-                // Add animation class
-                counterContainer.classList.add('counter-animation');
-                setTimeout(() => {
-                    counterContainer.classList.remove('counter-animation');
-                }, 300);
-            });
-            
-            // Detect volume key presses (works on mobile browsers)
-            window.addEventListener('keydown', function(e) {
-                // Volume Up (179) or Volume Down (178) in Android
-                // Volume Up (175) or Volume Down (174) in iOS/WebKit
-                if ([179, 178, 175, 174].includes(e.keyCode)) {
-                    e.preventDefault();
-                    incrementCounter();
-                }
-            });
-            
-            // Increment counter function
-            function incrementCounter() {
-                count++;
-                counter.textContent = count;
-                localStorage.setItem(STORAGE_KEY, count);
-                
-                // Add animation class
-                counterContainer.classList.add('counter-animation');
-                setTimeout(() => {
-                    counterContainer.classList.remove('counter-animation');
-                    
-                    // Show celebration every 33 counts (optional)
-                    if (count % 33 === 0 && count > 0) {
-                        showCelebration();
-                    }
-                }, 300);
-            }
-            
-            // Celebration animation
-            function showCelebration() {
-                celebration.classList.remove('hidden');
-                setTimeout(() => {
-                    celebration.classList.add('hidden');
-                }, 1500);
-            }
-            
-            // Also allow clicking the counter to increment (for accessibility)
-            counter.addEventListener('click', incrementCounter);
-            
-            // Vibration feedback if available
-            function vibrate() {
-                if ('vibrate' in navigator) {
-                    navigator.vibrate(50);
-                }
-            }
-        });
-    </script>
+    /* Container to center the counter vertically */
+    .container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* Welcome message at the top center */
+    #welcome {
+      position: absolute;
+      top: 20px;
+      width: 100%;
+      text-align: center;
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #333;
+    }
+
+    /* Counter in the middle */
+    #counter {
+      font-size: 6rem;
+      font-weight: bold;
+      color: #222;
+      user-select: none;
+    }
+
+    /* Reset button at the top right */
+    #reset {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      background-color: #e74c3c;
+      border: none;
+      border-radius: 4px;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+    #reset:hover {
+      background-color: #c0392b;
+    }
+
+    /* Instruction text at the bottom */
+    #instructions {
+      position: absolute;
+      bottom: 20px;
+      width: 100%;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="welcome">Assalamu’alaikum – Start Your Tasbih</div>
+    <button id="reset">Reset</button>
+    <div id="counter">0</div>
+    <div id="instructions">
+      Press your phone’s volume ↑ or ↓ button to increment the counter.
+    </div>
+  </div>
+
+  <script>
+    let count = 0;
+    const counterEl = document.getElementById('counter');
+    const resetBtn = document.getElementById('reset');
+
+    function updateDisplay() {
+      counterEl.textContent = count;
+    }
+
+    function incrementCounter() {
+      count += 1;
+      updateDisplay();
+    }
+
+    function resetCounter() {
+      count = 0;
+      updateDisplay();
+    }
+
+    resetBtn.addEventListener('click', resetCounter);
+
+    // Listen for volume button presses. On many mobile browsers,
+    // these keys may not be passed to the webpage, but on supported browsers:
+    window.addEventListener('keydown', function(event) {
+      // Modern browsers may report 'AudioVolumeUp' / 'AudioVolumeDown'
+      if (
+        event.key === 'AudioVolumeUp' ||
+        event.key === 'AudioVolumeDown' ||
+        // Fallback for numeric keyCode (not standardized everywhere):
+        event.keyCode === 175 || // Volume Up (some browsers)
+        event.keyCode === 174    // Volume Down (some browsers)
+      ) {
+        event.preventDefault();
+        incrementCounter();
+      }
+    });
+
+    // Some mobile WebViews send 'keyup' instead of 'keydown' for volume keys.
+    window.addEventListener('keyup', function(event) {
+      if (
+        event.key === 'AudioVolumeUp' ||
+        event.key === 'AudioVolumeDown' ||
+        event.keyCode === 175 ||
+        event.keyCode === 174
+      ) {
+        event.preventDefault();
+        incrementCounter();
+      }
+    });
+
+    // Fallback: if volume buttons aren’t captured, allow tapping anywhere to increment
+    // (Optional – comment out if not desired)
+    document.body.addEventListener('click', incrementCounter);
+  </script>
 </body>
 </html>
