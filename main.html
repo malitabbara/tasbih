@@ -17,6 +17,8 @@
     body {
       user-select: none;
       -webkit-user-select: none;
+      margin: 0;
+      padding: 0;
     }
     .counter-animation {
       animation: pulse 0.3s ease-in-out;
@@ -38,12 +40,12 @@
   class="bg-gradient-to-b from-green-100 to-blue-100 min-h-screen flex flex-col items-center justify-center p-4 transition-colors duration-300"
 >
   <div class="w-full max-w-md mx-auto">
-    <!-- Header with welcome message -->
+    <!-- Header -->
     <div class="text-center mb-8 relative">
       <h1 class="text-3xl font-bold text-green-800 mb-2">Welcome to Digital Tasbih</h1>
-      <p class="text-gray-600">Use your volume buttons to count</p>
+      <p class="text-gray-600">Press your device’s volume buttons to count</p>
 
-      <!-- Reset button in top right -->
+      <!-- Reset button -->
       <button
         id="resetBtn"
         class="absolute top-0 right-0 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-md transition-all duration-200 transform hover:rotate-180"
@@ -52,7 +54,7 @@
       </button>
     </div>
 
-    <!-- Main counter display -->
+    <!-- Counter display -->
     <div
       class="bg-white rounded-2xl shadow-xl p-8 mb-8 transition-all duration-300 hover:shadow-2xl"
     >
@@ -81,12 +83,15 @@
         </li>
         <li class="flex items-start">
           <i class="fas fa-redo text-red-500 mt-1 mr-2"></i>
-          <span>Click the reset button to start over</span>
+          <span>Tap the reset button to start over</span>
+        </li>
+        <li class="text-sm text-gray-500">
+          (If your browser does not deliver volume‐key events, tap the big “0” above.)
         </li>
       </ul>
     </div>
 
-    <!-- Celebration animation container -->
+    <!-- Celebration animation -->
     <div
       id="celebration"
       class="fixed inset-0 flex items-center justify-center pointer-events-none hidden"
@@ -97,85 +102,88 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", function () {
-      const counter = document.getElementById("counter");
+      const counterEl = document.getElementById("counter");
       const resetBtn = document.getElementById("resetBtn");
       const counterContainer = document.getElementById("counterContainer");
       const celebration = document.getElementById("celebration");
 
-      let count = 0;
       const STORAGE_KEY = "tasbih_counter";
-
-      // Load saved count from localStorage
-      if (localStorage.getItem(STORAGE_KEY)) {
-        count = parseInt(localStorage.getItem(STORAGE_KEY), 10) || 0;
-        counter.textContent = count;
+      let count = 0;
+      // If there’s a saved value in localStorage, use it:
+      if (localStorage.getItem(STORAGE_KEY) !== null) {
+        const saved = parseInt(localStorage.getItem(STORAGE_KEY), 10);
+        if (!isNaN(saved)) {
+          count = saved;
+        }
       }
+      counterEl.textContent = count;
 
-      // Reset button functionality
-      resetBtn.addEventListener("click", function () {
+      // Reset button clears counter:
+      resetBtn.addEventListener("click", () => {
         count = 0;
-        counter.textContent = count;
+        counterEl.textContent = count;
         localStorage.setItem(STORAGE_KEY, count);
-
-        // Add animation class
-        counterContainer.classList.add("counter-animation");
-        setTimeout(() => {
-          counterContainer.classList.remove("counter-animation");
-        }, 300);
+        animateCounter();
       });
 
-      // We only want to increment once per physical press (avoid repeats)
-      let isVolumeKeyHeld = false;
+      // Only increment once per volume‐key press
+      let volumeHeld = false;
 
-      window.addEventListener("keydown", function (e) {
-        // Some modern browsers (including Chrome on Android) will set e.key to "AudioVolumeUp"/"AudioVolumeDown"
-        // Fallback to older keyCode values: 179/178 (Android), 175/174 (iOS/WebKit)
-        const key = e.key;
+      window.addEventListener("keydown", (e) => {
+        // Modern browsers: e.key === "AudioVolumeUp"/"AudioVolumeDown"
+        // Fallback: older keyCodes (179/175 = VolUp, 178/174 = VolDown)
+        const k = e.key;
         const code = e.keyCode;
-        const isVolumeUp =
-          key === "AudioVolumeUp" || code === 179 || code === 175;
-        const isVolumeDown =
-          key === "AudioVolumeDown" || code === 178 || code === 174;
+        const isVolUp =
+          k === "AudioVolumeUp" || code === 179 || code === 175;
+        const isVolDown =
+          k === "AudioVolumeDown" || code === 178 || code === 174;
 
-        if ((isVolumeUp || isVolumeDown) && !isVolumeKeyHeld) {
-          e.preventDefault();
-          isVolumeKeyHeld = true;
-          incrementCounter();
-          vibrate();
+        if ((isVolUp || isVolDown) && !volumeHeld) {
+          e.preventDefault(); // try to block the system volume adjust
+          volumeHeld = true;
+          increment();
+          giveHaptic();
         }
       });
 
-      window.addEventListener("keyup", function (e) {
-        const key = e.key;
+      window.addEventListener("keyup", (e) => {
+        const k = e.key;
         const code = e.keyCode;
-        const isVolumeUp =
-          key === "AudioVolumeUp" || code === 179 || code === 175;
-        const isVolumeDown =
-          key === "AudioVolumeDown" || code === 178 || code === 174;
+        const isVolUp =
+          k === "AudioVolumeUp" || code === 179 || code === 175;
+        const isVolDown =
+          k === "AudioVolumeDown" || code === 178 || code === 174;
 
-        if (isVolumeUp || isVolumeDown) {
-          isVolumeKeyHeld = false;
+        if (isVolUp || isVolDown) {
+          volumeHeld = false;
         }
       });
 
-      // Increment counter function
-      function incrementCounter() {
+      // Tapping the big number also increments (fallback/accessibility)
+      counterEl.addEventListener("click", () => {
+        increment();
+        giveHaptic();
+      });
+
+      function increment() {
         count++;
-        counter.textContent = count;
+        counterEl.textContent = count;
         localStorage.setItem(STORAGE_KEY, count);
+        animateCounter();
+        // Show 🎉 every 33 counts (optional)
+        if (count > 0 && count % 33 === 0) {
+          showCelebration();
+        }
+      }
 
-        // Add animation class
+      function animateCounter() {
         counterContainer.classList.add("counter-animation");
         setTimeout(() => {
-          // Remove animation, then possibly show celebration
           counterContainer.classList.remove("counter-animation");
-          if (count > 0 && count % 33 === 0) {
-            showCelebration();
-          }
         }, 300);
       }
 
-      // Celebration animation
       function showCelebration() {
         celebration.classList.remove("hidden");
         setTimeout(() => {
@@ -183,30 +191,18 @@
         }, 1500);
       }
 
-      // Also allow clicking the counter to increment (accessibility)
-      counter.addEventListener("click", function () {
-        incrementCounter();
-        vibrate();
-      });
-
-      // Vibration feedback if available
-      function vibrate() {
-        if ("vibrate" in navigator) {
+      function giveHaptic() {
+        if (navigator.vibrate) {
           navigator.vibrate(50);
         }
       }
 
-      // Register service worker for PWA
+      // Register service worker (optional, for PWA)
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => {
           navigator.serviceWorker
             .register("/sw.js")
-            .then(() => {
-              console.log("ServiceWorker registration successful");
-            })
-            .catch((err) => {
-              console.log("ServiceWorker registration failed: ", err);
-            });
+            .catch((err) => console.log("SW registration failed:", err));
         });
       }
     });
