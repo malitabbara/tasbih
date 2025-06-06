@@ -1,174 +1,215 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#e6ffec">
-    <link rel="manifest" href="/manifest.json">
-    <title>Digital Tasbih Counter</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body {
-            user-select: none;
-            -webkit-user-select: none;
-        }
-        .counter-animation {
-            animation: pulse 0.3s ease-in-out;
-        }
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#e6ffec" />
+  <link rel="manifest" href="/manifest.json" />
+  <title>Digital Tasbih Counter</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+  />
+  <style>
+    body {
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .counter-animation {
+      animation: pulse 0.3s ease-in-out;
+    }
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.1);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+  </style>
 </head>
-<body class="bg-gradient-to-b from-green-100 to-blue-100 min-h-screen flex flex-col items-center justify-center p-4 transition-colors duration-300">
-    <div class="w-full max-w-md mx-auto">
-        <!-- Header with welcome message -->
-        <div class="text-center mb-8 relative">
-            <h1 class="text-3xl font-bold text-green-800 mb-2">Welcome to Digital Tasbih</h1>
-            <p class="text-gray-600">Use your volume buttons to count</p>
-            
-            <!-- Reset button in top right -->
-            <button id="resetBtn" class="absolute top-0 right-0 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-md transition-all duration-200 transform hover:rotate-180">
-                <i class="fas fa-redo"></i>
-            </button>
-        </div>
-        
-        <!-- Main counter display -->
-        <div class="bg-white rounded-2xl shadow-xl p-8 mb-8 transition-all duration-300 hover:shadow-2xl">
-            <div id="counterContainer" class="text-center">
-                <div class="text-gray-500 mb-2">Your Count</div>
-                <div id="counter" class="text-7xl font-bold text-green-600 transition-all duration-200">0</div>
-            </div>
-        </div>
-        
-        <!-- Instructions -->
-        <div class="bg-white rounded-xl p-6 shadow-lg">
-            <h2 class="text-xl font-semibold text-green-700 mb-3">How to use:</h2>
-            <ul class="space-y-2 text-gray-600">
-                <li class="flex items-start">
-                    <i class="fas fa-volume-up text-green-500 mt-1 mr-2"></i>
-                    <span>Press <strong>Volume Up</strong> to increase count</span>
-                </li>
-                <li class="flex items-start">
-                    <i class="fas fa-volume-down text-green-500 mt-1 mr-2"></i>
-                    <span>Press <strong>Volume Down</strong> to increase count</span>
-                </li>
-                <li class="flex items-start">
-                    <i class="fas fa-redo text-red-500 mt-1 mr-2"></i>
-                    <span>Click the reset button to start over</span>
-                </li>
-            </ul>
-        </div>
-        
-        <!-- Celebration animation container -->
-        <div id="celebration" class="fixed inset-0 flex items-center justify-center pointer-events-none hidden">
-            <div class="text-6xl animate-bounce">🎉</div>
-        </div>
+<body
+  class="bg-gradient-to-b from-green-100 to-blue-100 min-h-screen flex flex-col items-center justify-center p-4 transition-colors duration-300"
+>
+  <div class="w-full max-w-md mx-auto">
+    <!-- Header with welcome message -->
+    <div class="text-center mb-8 relative">
+      <h1 class="text-3xl font-bold text-green-800 mb-2">Welcome to Digital Tasbih</h1>
+      <p class="text-gray-600">Use your volume buttons to count</p>
+
+      <!-- Reset button in top right -->
+      <button
+        id="resetBtn"
+        class="absolute top-0 right-0 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-md transition-all duration-200 transform hover:rotate-180"
+      >
+        <i class="fas fa-redo"></i>
+      </button>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const counter = document.getElementById('counter');
-            const resetBtn = document.getElementById('resetBtn');
-            const counterContainer = document.getElementById('counterContainer');
-            const celebration = document.getElementById('celebration');
-            
-            let count = 0;
-            const STORAGE_KEY = 'tasbih_counter';
-            
-            // Load saved count from localStorage
-            if (localStorage.getItem(STORAGE_KEY)) {
-                count = parseInt(localStorage.getItem(STORAGE_KEY));
-                counter.textContent = count;
-            }
-            
-            // Reset button functionality
-            resetBtn.addEventListener('click', function() {
-                count = 0;
-                counter.textContent = count;
-                localStorage.setItem(STORAGE_KEY, count);
-                
-                // Add animation class
-                counterContainer.classList.add('counter-animation');
-                setTimeout(() => {
-                    counterContainer.classList.remove('counter-animation');
-                }, 300);
-            });
-            
-            // Detect volume key presses (works on mobile browsers)
-            let canIncrement = true;
-            
-            window.addEventListener('keydown', function(e) {
-                // Volume Up (179) or Volume Down (178) in Android
-                // Volume Up (175) or Volume Down (174) in iOS/WebKit
-                if ([179, 178, 175, 174].includes(e.keyCode) && canIncrement) {
-                    e.preventDefault();
-                    canIncrement = false;
-                    incrementCounter();
-                }
-            });
-            
-            window.addEventListener('keyup', function(e) {
-                if ([179, 178, 175, 174].includes(e.keyCode)) {
-                    canIncrement = true;
-                }
-            });
-            
-            // Increment counter function
-            function incrementCounter() {
-                count++;
-                counter.textContent = count;
-                localStorage.setItem(STORAGE_KEY, count);
-                
-                // Add animation class
-                counterContainer.classList.add('counter-animation');
-                setTimeout(() => {
-                    counterContainer.classList.remove('counter-animation');
-                    
-                    // Show celebration every 33 counts (optional)
-                    if (count % 33 === 0 && count > 0) {
-                        showCelebration();
-                    }
-                }, 300);
-            }
-            
-            // Celebration animation
-            function showCelebration() {
-                celebration.classList.remove('hidden');
-                setTimeout(() => {
-                    celebration.classList.add('hidden');
-                }, 1500);
-            }
-            
-            // Also allow clicking the counter to increment (for accessibility)
-            counter.addEventListener('click', incrementCounter);
-            
-            // Vibration feedback if available
-            function vibrate() {
-                if ('vibrate' in navigator) {
-                    navigator.vibrate(50);
-                }
-            }
+    <!-- Main counter display -->
+    <div
+      class="bg-white rounded-2xl shadow-xl p-8 mb-8 transition-all duration-300 hover:shadow-2xl"
+    >
+      <div id="counterContainer" class="text-center">
+        <div class="text-gray-500 mb-2">Your Count</div>
+        <div
+          id="counter"
+          class="text-7xl font-bold text-green-600 transition-all duration-200"
+        >
+          0
+        </div>
+      </div>
+    </div>
 
-            // Register service worker for PWA
-            if ('serviceWorker' in navigator) {
-                window.addEventListener('load', () => {
-                    navigator.serviceWorker.register('/sw.js')
-                        .then(registration => {
-                            console.log('ServiceWorker registration successful');
-                        })
-                        .catch(err => {
-                            console.log('ServiceWorker registration failed: ', err);
-                        });
-                });
-            }
+    <!-- Instructions -->
+    <div class="bg-white rounded-xl p-6 shadow-lg">
+      <h2 class="text-xl font-semibold text-green-700 mb-3">How to use:</h2>
+      <ul class="space-y-2 text-gray-600">
+        <li class="flex items-start">
+          <i class="fas fa-volume-up text-green-500 mt-1 mr-2"></i>
+          <span>Press <strong>Volume Up</strong> to increase count</span>
+        </li>
+        <li class="flex items-start">
+          <i class="fas fa-volume-down text-green-500 mt-1 mr-2"></i>
+          <span>Press <strong>Volume Down</strong> to increase count</span>
+        </li>
+        <li class="flex items-start">
+          <i class="fas fa-redo text-red-500 mt-1 mr-2"></i>
+          <span>Click the reset button to start over</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Celebration animation container -->
+    <div
+      id="celebration"
+      class="fixed inset-0 flex items-center justify-center pointer-events-none hidden"
+    >
+      <div class="text-6xl animate-bounce">🎉</div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const counter = document.getElementById("counter");
+      const resetBtn = document.getElementById("resetBtn");
+      const counterContainer = document.getElementById("counterContainer");
+      const celebration = document.getElementById("celebration");
+
+      let count = 0;
+      const STORAGE_KEY = "tasbih_counter";
+
+      // Load saved count from localStorage
+      if (localStorage.getItem(STORAGE_KEY)) {
+        count = parseInt(localStorage.getItem(STORAGE_KEY), 10) || 0;
+        counter.textContent = count;
+      }
+
+      // Reset button functionality
+      resetBtn.addEventListener("click", function () {
+        count = 0;
+        counter.textContent = count;
+        localStorage.setItem(STORAGE_KEY, count);
+
+        // Add animation class
+        counterContainer.classList.add("counter-animation");
+        setTimeout(() => {
+          counterContainer.classList.remove("counter-animation");
+        }, 300);
+      });
+
+      // We only want to increment once per physical press (avoid repeats)
+      let isVolumeKeyHeld = false;
+
+      window.addEventListener("keydown", function (e) {
+        // Some modern browsers (including Chrome on Android) will set e.key to "AudioVolumeUp"/"AudioVolumeDown"
+        // Fallback to older keyCode values: 179/178 (Android), 175/174 (iOS/WebKit)
+        const key = e.key;
+        const code = e.keyCode;
+        const isVolumeUp =
+          key === "AudioVolumeUp" || code === 179 || code === 175;
+        const isVolumeDown =
+          key === "AudioVolumeDown" || code === 178 || code === 174;
+
+        if ((isVolumeUp || isVolumeDown) && !isVolumeKeyHeld) {
+          e.preventDefault();
+          isVolumeKeyHeld = true;
+          incrementCounter();
+          vibrate();
+        }
+      });
+
+      window.addEventListener("keyup", function (e) {
+        const key = e.key;
+        const code = e.keyCode;
+        const isVolumeUp =
+          key === "AudioVolumeUp" || code === 179 || code === 175;
+        const isVolumeDown =
+          key === "AudioVolumeDown" || code === 178 || code === 174;
+
+        if (isVolumeUp || isVolumeDown) {
+          isVolumeKeyHeld = false;
+        }
+      });
+
+      // Increment counter function
+      function incrementCounter() {
+        count++;
+        counter.textContent = count;
+        localStorage.setItem(STORAGE_KEY, count);
+
+        // Add animation class
+        counterContainer.classList.add("counter-animation");
+        setTimeout(() => {
+          // Remove animation, then possibly show celebration
+          counterContainer.classList.remove("counter-animation");
+          if (count > 0 && count % 33 === 0) {
+            showCelebration();
+          }
+        }, 300);
+      }
+
+      // Celebration animation
+      function showCelebration() {
+        celebration.classList.remove("hidden");
+        setTimeout(() => {
+          celebration.classList.add("hidden");
+        }, 1500);
+      }
+
+      // Also allow clicking the counter to increment (accessibility)
+      counter.addEventListener("click", function () {
+        incrementCounter();
+        vibrate();
+      });
+
+      // Vibration feedback if available
+      function vibrate() {
+        if ("vibrate" in navigator) {
+          navigator.vibrate(50);
+        }
+      }
+
+      // Register service worker for PWA
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker
+            .register("/sw.js")
+            .then(() => {
+              console.log("ServiceWorker registration successful");
+            })
+            .catch((err) => {
+              console.log("ServiceWorker registration failed: ", err);
+            });
         });
-    </script>
+      }
+    });
+  </script>
 </body>
 </html>
